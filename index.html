@@ -1,134 +1,94 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Selgros | QR-Code zusammenführen</title>
-	<link rel="shortcut icon" type="image/x-icon" href="https://www.selgros.de/themes/contrib/transgourmet-base-theme/apps/drupal/assets/logo-icon.svg">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"/>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        font-size: 16px;
-        line-height: 1.5;
-        text-align: center;
+<head>
+  <title>Selgros | QR-Codes zusammenführen</title>
+  <style>
+    #canvas {
+      width: 210mm; /* A5 width */
+      height: 148mm; /* A5 height */
+      display: flex;
+      flex-wrap: wrap;
+      align-content: flex-start;
+    }
+
+    .qr-code {
+      width: calc(25% - 20px); /* Adjusted width to include spacing */
+      height: calc(25% - 20px); /* Adjusted height to include spacing */
+      margin: 10px; /* Added spacing between pictures */
+    }
+
+    #print-button {
+      margin-top: 20px;
+    }
+
+    @media print {
+      .qr-code {
+        width: calc(25% - 20px) !important; /* Adjusted width to include spacing */
+        height: calc(25% - 20px) !important; /* Adjusted height to include spacing */
+        margin: 10px !important; /* Added spacing between pictures */
       }
+    }
+  </style>
+</head>
+<body>
+  <input type="file" id="file-input" multiple>
+  <button id="print-button">Drucken</button>
+  <div id="canvas"></div>
 
-       #fileInput {
-        display: none;
+  <script>
+    const canvas = document.getElementById('canvas');
+    const printButton = document.getElementById('print-button');
+    const fileInput = document.getElementById('file-input');
+
+    fileInput.addEventListener('change', handleFileSelect);
+    printButton.addEventListener('click', handlePrint);
+
+    function handleFileSelect(event) {
+      const files = event.target.files;
+
+      if (files && files.length > 0) {
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const reader = new FileReader();
+
+          reader.onload = (function(file) {
+            return function(e) {
+              const qrCode = document.createElement('img');
+              qrCode.className = 'qr-code';
+              qrCode.src = e.target.result;
+              canvas.appendChild(qrCode);
+            };
+          })(file);
+
+          reader.readAsDataURL(file);
+        }
       }
+    }
 
-      #fileInputLabel {
-        display: inline-block;
-        margin: 20px auto;
-        padding: 10px;
-        border: none;
-        border-radius: 5px;
-        font-size: 16px;
-        cursor: pointer;
-        background-color: #eee;
-      }
+    function handlePrint() {
+  const printWindow = window.open('', '_blank');
+  printWindow.document.open();
+  printWindow.document.write('<html><head><title>Print</title>');
+  printWindow.document.write('<style>');
+  printWindow.document.write(`
+    .qr-code {
+      width: calc(25% - 20px) !important;
+      height: calc(25% - 20px) !important;
+      margin: 10px !important;
+    }
+  `);
+  printWindow.document.write('</style>');
+  printWindow.document.write('</head><body>');
+  const qrCodes = canvas.getElementsByClassName('qr-code');
+  for (let i = 0; i < qrCodes.length; i++) {
+    const qrCode = qrCodes[i];
+    printWindow.document.write(qrCode.outerHTML);
+  }
+  printWindow.document.write('</body></html>');
+  printWindow.document.close();
+  printWindow.print();
+}
 
-      #fileInputLabel:hover {
-        background-color: #e6e6e6;
-      }
-
-      #mergeButton {
-		display: block;
-        width: 50%;
-        padding: 10px;
-        margin: 0 auto;
-        border: none;
-        background-color: #333;
-        color: #fff;
-        font-size: 18px;
-        border-radius: 5px;
-        cursor: pointer;
-      }
-	  
-	  #mergeButton:active {
-        transform: translateY(1px);
-        box-shadow: none;
-      }
-	  
-	  label {
-        display: block;
-      }
-	  
-	  i {
-        margin-right: 10px;
-      }
-	  </style>
-  </head>
-  <body>
-	<div style="text-align:center;">
-      <img src="https://www.selgros.de/sites/default/files/styles/original_extra_large/public/2023-03/Selgros-Logo.png.jpg" alt="Selgros Logo" width="300">
-    </div>
-	<label>Maximal 16 QR-Codes auswählen, welche zusammengeführt werden sollen:</label>
-	<label for="fileInput" id="fileInputLabel"><i class="fa fa-file" aria-hidden="true"></i>Durchsuchen...</label>
-    <input type="file" id="fileInput" multiple>
-		
-    <button id="mergeButton"><i class="fas fa-print"></i>QR-Codes zusammenführen und drucken</button>
-	
-    <script>
-      // Set the A5 dimensions in pixels
-      const a5Width = 1485;
-      const a5Height = 2100;
-
-      // Define the margin between sections and rows
-      const sectionMargin = 20;
-      const rowMargin = 80;
-
-      // Create a canvas element with the A5 dimensions
-      const canvas = document.createElement('canvas');
-      canvas.width = a5Width;
-      canvas.height = a5Height;
-
-      // Get the canvas context
-      const ctx = canvas.getContext('2d');
-
-      // Set the number of rows and columns
-      const rows = 4;
-      const cols = 4;
-
-      // Define the width and height of each section to fit the QR codes with margins
-      const sectionWidth = (a5Width - (cols - 1) * sectionMargin) / cols;
-      const sectionHeight = (a5Height - (rows - 1) * sectionMargin - (rows - 1) * rowMargin) / rows;
-
-      // Initialize the current row and column
-      let currentRow = 0;
-      let currentCol = 0;
-
-      // Get the file input element
-      const fileInput = document.getElementById('fileInput');
-
-      // Get the merge button element
-      const mergeButton = document.getElementById('mergeButton');
-
-      // Add an event listener to the merge button
-      mergeButton.addEventListener('click', () => {
-	  const maxFiles = 16;
-	  const numFiles = Math.min(fileInput.files.length, maxFiles);
-	  const numCols = Math.ceil(Math.sqrt(numFiles));
-	  const numRows = Math.ceil(numFiles / numCols);
-
-	  for (let i = 0; i < numFiles; i++) {
-		const file = fileInput.files[i];
-		const img = new Image();
-		img.onload = () => {
-		  const x = i % numCols * (sectionWidth + sectionMargin);
-		  const y = Math.floor(i / numCols) * (sectionHeight + sectionMargin + rowMargin);
-		  ctx.drawImage(img, x, y, sectionWidth, sectionHeight);
-		  if (i === numFiles - 1) {
-			const printWindow = window.open('', 'Print', 'height=400,width=600');
-			printWindow.document.write('<img src="' + canvas.toDataURL() + '">');
-			printWindow.document.close();
-			printWindow.focus();
-			printWindow.print();
-			printWindow.close();
-		  }
-		};
-		img.src = URL.createObjectURL(file);
-	  }
-	});
-    </script>
-  </body>
+  </script>
+</body>
 </html>
